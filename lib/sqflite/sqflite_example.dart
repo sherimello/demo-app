@@ -10,84 +10,73 @@ class SqfliteExample extends StatefulWidget {
 }
 
 class _SqfliteExampleState extends State<SqfliteExample> {
-
   late Database database;
   List<Map<String, dynamic>> _users = [];
 
+  init() async {
+    await initializeDatabase();
+    await fetchUsers();
+  }
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     init();
   }
 
-
-  init() async{
-    await _initializeDatabase();
-    await _fetchUsers();
-  }
-
-  Future<void> _initializeDatabase() async{
+  Future<void> initializeDatabase() async {
     database = await openDatabase(join(await getDatabasesPath(), 'users.db'),
-    onCreate: (db, version) {
+        onCreate: (db, version) {
       return db.execute(
-        "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)"
-      );
-    },
-      version: 1
-    );
+          "CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT, age INTEGER)");
+    }, version: 2);
   }
 
-  Future<void> _fetchUsers() async{
+  Future<void> fetchUsers() async {
     final List<Map<String, dynamic>> users = await database.query('users');
     setState(() {
       _users = users;
     });
   }
 
-  Future<void> _insertUser(String name, int age) async{
-    await database.insert('users', {'name' : name, 'age': age},
-    conflictAlgorithm: ConflictAlgorithm.replace
-    );
-    _fetchUsers();
+  Future<void> insertUser(String name, int age) async {
+    await database.insert('users', {'name': name, 'age': age},
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    fetchUsers();
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                hintText: "enter name",
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextField(
+                decoration: const InputDecoration(hintText: "enter name"),
+                onSubmitted: (value) {
+                  //insert this data to database...
+                  insertUser(value, 25);
+                },
               ),
-              onSubmitted: (value) {
-                //insert value to the db...
-                _insertUser(value, 25);
-              },
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            _users.isEmpty ? const SizedBox() : Expanded(
-              child: ListView.builder(
-                  itemCount: _users.length,
-                  itemBuilder: (context, index) {
-
-                    final user = _users[index];
-
-                return ListTile(
-                  title: Text("Name: ${user['name'] ?? ""}"),
-                  subtitle: Text("Age: ${user['age'] ?? ""}"),
-                );
-              }),
-            )
-          ],
+              const SizedBox(
+                height: 21,
+              ),
+              _users.isEmpty
+                  ? const SizedBox()
+                  : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for(dynamic d in _users)
+                    Text("${d['name']}\n${d['age'].toString()}\n",
+                    textAlign: TextAlign.start,
+                    )
+                ],
+              )
+            ],
+          ),
         ),
       ),
     );
